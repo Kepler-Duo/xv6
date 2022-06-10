@@ -1,7 +1,8 @@
 #include "types.h"
 #include "user.h"
+#define N 1e9
 
-int global = 0;
+int COUNT = 0;
 int fib(int x)
 {
     if(x <= 2) return x;
@@ -10,19 +11,19 @@ int fib(int x)
 void func(void* t_num)
 {
     int i;
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 3; i++)
     {
-        int c = 1145141919; while(c--);
-        global++;
-        int n = 5 * (int)t_num + i + 2 + c;
-        printf(0, "thread num: %d, global: %d, fib(%d) = %d\n", (int)t_num, global, n, fib(n));
+        int c = N; while(c--);
+        COUNT++;
+        int n = 3 * (int)t_num + i + c + 2;
+        printf(0, "thread num: %d, count: %d, fib(%d) = %d\n", (int)t_num, COUNT, n, fib(n));
     }
     exit();
 }
 
 int main(int argc, char* argv[])
 {
-    int tids[5];
+    int tids[3];
     int i;
     for (i = 0; i < 3; i++)
     {

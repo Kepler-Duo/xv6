@@ -92,11 +92,11 @@ sys_uptime(void)
 
 int sys_clone(void)
 {
-  int f, a, s;
-  if(argint(0, &f) < 0) return -1;
-  if(argint(1, &a) < 0) return -1;
-  if(argint(2, &s) < 0) return -1;
-  return clone((void (*)(void *))f, (void*)a, (void*)s);
+  int func, arg, stack;
+  if(argint(0, &func) < 0) return -1;
+  if(argint(1, &arg) < 0) return -1;
+  if(argint(2, &stack) < 0) return -1;
+  return clone((void *)func, (void*)arg, (void*)stack);
 }
 
 int sys_join(void) 

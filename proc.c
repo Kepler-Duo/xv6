@@ -202,6 +202,11 @@ exit(void)
   // Parent might be sleeping in wait().
   wakeup1(proc->parent);
 
+  // Parent might be sleeping in join().
+  if(proc->parent==0 && proc->pthread!=0)
+    wakeup1(proc->pthread);
+  else wakeup1(proc->parent);
+
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == proc){
@@ -476,16 +481,14 @@ procdump(void)
   }
 }
 
-int 
-clone(void(*func)(void *), void *arg, void *stack)
+
+int clone(void(*func)(void *), void *arg, void *stack)
 {
-  
   struct proc *curproc = proc; // 记录发出 clone 的进程（np->pthread 记录的父线程）
   struct proc *np;
 
   if ((np = allocproc()) == 0) //为新线程分配 PCB/TCB
     return -1;
-
   //由于共享进程映像，只需使用同一个页表即可，无需拷贝内容
   np->pgdir = curproc->pgdir; // 线程间共用同一个页表
   np->sz = curproc->sz;
@@ -505,7 +508,6 @@ clone(void(*func)(void *), void *arg, void *stack)
   np->tf->ebp = (int)sp; // 栈帧指针
   np->tf->eax = 0;
 
-  
   for (int i = 0; i < NOFILE; i++) // 复制文件描述符
     if (curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
@@ -542,7 +544,6 @@ join(int tid)
       havekids = 1;
       if (p->state == ZOMBIE)
       {
-        cprintf("let's free");
         kfree(p->kstack); //释放内核栈
         p->state = UNUSED;
         release(&ptable.lock);
