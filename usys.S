@@ -29,3 +29,6 @@ SYSCALL(getpid)
 SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
+
+SYSCALL(clone)
+SYSCALL(join)
