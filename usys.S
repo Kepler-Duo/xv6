@@ -32,3 +32,5 @@ SYSCALL(uptime)
 
 SYSCALL(clone)
 SYSCALL(join)
+
+SYSCALL(chmod)

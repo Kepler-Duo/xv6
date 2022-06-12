@@ -236,7 +236,7 @@ bad:
 }
 
 static struct inode*
-create(char *path, short type, short major, short minor)
+create(char *path, char type, short major, short minor)
 {
   uint off;
   struct inode *ip, *dp;
@@ -437,5 +437,29 @@ sys_pipe(void)
   }
   fd[0] = fd0;
   fd[1] = fd1;
+  return 0;
+}
+
+int sys_chmod(void)
+{
+  char *pathname; // 路径名
+  int mode;       // 新的访问权限
+  struct inode *ip;
+  if (argstr(0, &pathname) < 0 || argint(1, &mode) < 0)
+    return -1;
+  begin_op();
+
+  if ((ip = namei(pathname)) == 0)
+  { // 找到对应索引节点
+    end_op();
+    return -1;
+  }
+
+  ilock(ip);
+  ip->mode = (char)mode; // 修改权限
+  iupdate(ip);           // 更新 dinode
+  iunlock(ip);
+
+  end_op();
   return 0;
 }

@@ -27,6 +27,7 @@ int uptime(void);
 int clone(void(*func)(void*), void*, void*);
 int join(int);
 
+int chmod(char*, char);
 
 // ulib.c
 int stat(char*, struct stat*);
