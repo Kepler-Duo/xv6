@@ -65,6 +65,8 @@ struct proc {
   char name[16];               // Process name (debugging)
   struct proc *pthread;        // Parent thread
   void* ustack;                // User thread stack 
+
+  uint swap_start;
 };
 
 // Process memory is laid out contiguously, low addresses first:

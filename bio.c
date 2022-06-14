@@ -140,6 +140,25 @@ brelse(struct buf *b)
 
   release(&bcache.lock);
 }
+
+void read_disk(int dev, char *va, uint blockno) { 
+  struct buf *b;
+  for (int i = 0; i < 8; i++) {
+    b = bread(dev, blockno + i);
+    memmove(va + i * BSIZE, b->data, BSIZE);
+    brelse(b);
+  }
+}
+
+void write_disk(int dev, char *va, uint blockno) {
+  struct buf *b;
+  for (int i = 0; i < 8; i++) {
+    b = bget(dev, blockno + i);
+    memmove(b->data, va + i * BSIZE, BSIZE);
+    bwrite(b);
+    brelse(b);
+  }
+}
 //PAGEBREAK!
 // Blank page.
 

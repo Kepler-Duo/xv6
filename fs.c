@@ -94,6 +94,38 @@ bfree(int dev, uint b)
   brelse(bp);
 }
 
+uint balloc8(uint dev) {
+  uint n;
+  for (int i = 0; i < 8; i++)
+    n = balloc(dev);
+  return n - 7;
+}
+
+/*uint balloc8(uint dev) {
+  uint b, bi;
+  for (b =0; b < sb.size; b++) {
+    struct buf* bp = bread(dev, BBLOCK(b, sb));
+    for (bi = 0; bi < BSIZE && b + bi < sb.size; bi++){
+      if (bp->data[bi] == 0) {
+        bp->data[bi] = ~bp->data[bi];
+        log_write(bp);
+        brelse(bp);
+        return b + bi *8;
+      }
+    }
+    brelse(bp);
+  }
+  panic("balloc: out of blocks");
+}*/
+
+void bfree8(int dev, uint b) {
+  begin_op();
+  for (int i = 0; i < 8; i++){
+    bfree(dev, b + i);
+  }
+  end_op();
+}
+
 // Inodes.
 //
 // An inode describes a single unnamed file.

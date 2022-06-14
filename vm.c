@@ -235,8 +235,9 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     mem = kalloc();
     if(mem == 0){
       cprintf("allocuvm out of memory\n");
-      deallocuvm(pgdir, newsz, oldsz);
-      return 0;
+      // deallocuvm(pgdir, newsz, oldsz);
+      // return 0;
+      break;
     }
     memset(mem, 0, PGSIZE);
     if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
@@ -272,7 +273,8 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       if(pa == 0)
         panic("kfree");
       char *v = P2V(pa);
-      kfree(v);
+      if (!(PTE_FLAGS(*pte) & PTE_SWAPPED))
+        kfree(v);
       *pte = 0;
     }
   }
@@ -384,6 +386,55 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+uint swapout(pde_t *pgdir, uint swap_start, uint sz) {
+  pte_t *pte;
+  uint a = swap_start;
+  a = PGROUNDDOWN(a);
+
+  for(; a<sz; a+=PGSIZE) {
+    pte = walkpgdir(pgdir, (char*)a, 0);
+    if ((*pte & PTE_P) && !(*pte & PTE_SWAPPED)) {
+      uint pa = PTE_ADDR(*pte);
+
+      begin_op();
+      uint blockno = balloc8(1);
+      end_op();
+      write_disk(1, (char*)P2V(pa), blockno);
+      *pte = (blockno << 12);
+      *pte = (*pte) | PTE_SWAPPED | PTE_P;
+      cprintf("[swap out] va: %p --> block: %d, get free page pa: %p\n", a, blockno, P2V(pa));
+      return pa;
+    }
+  }
+  return 0;
+}
+
+void swapin(char* pa, uint blockno) {
+  read_disk(1, P2V(pa), blockno);
+  bfree8(1, blockno);
+}
+
+void pagefault(pde_t *pgdir, void* va, uint swap_start, uint sz) {
+  va = (char*)PGROUNDDOWN((uint)va);
+  pte_t* pte = walkpgdir(proc->pgdir, va, 0);
+  uint flags = PTE_FLAGS(*pte);
+
+  char* mem = kalloc();
+  if (mem == 0)
+    mem = (char*)swapout(pgdir, swap_start, sz);
+  if (mem == 0)
+    panic("Can not found swap page\n");
+  if (flags & PTE_SWAPPED) {
+    uint blockno = (*pte) >> 12;
+    swapin(mem, blockno);
+    *pte = (*pte) & ~PTE_SWAPPED;
+    cprintf("[swap in] block: %d --> va: %p, free block: %d\n", blockno, va, blockno);
+  }
+  pte = walkpgdir(proc->pgdir, va, 1);
+  *pte = (uint)mem | PTE_U | PTE_W | PTE_P;
+  //mappages(proc->pgdir, va, PGSIZE, (uint)mem, PTE_W | PTE_U);
+  cprintf("[pg fault] map va: %p to pa: %p\n",va, V2P(mem));
+}
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
