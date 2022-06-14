@@ -409,8 +409,10 @@ uint swapout(pde_t *pgdir, uint swap_start, uint sz) {
   return 0;
 }
 
-void swapin(char* pa, uint blockno) {
+void swapin(pde_t *pgdir, char* pa, uint blockno) {
   read_disk(1, P2V(pa), blockno);
+  pte_t* pte = walkpgdir(pgdir, P2V(pa), 0);
+  *pte &= ~PTE_SWAPPED;
   bfree8(1, blockno);
 }
 
@@ -426,7 +428,7 @@ void pagefault(pde_t *pgdir, void* va, uint swap_start, uint sz) {
     panic("Can not found swap page\n");
   if (flags & PTE_SWAPPED) {
     uint blockno = (*pte) >> 12;
-    swapin(mem, blockno);
+    swapin(pgdir, mem, blockno);
     *pte = (*pte) & ~PTE_SWAPPED;
     cprintf("[swap in] block: %d --> va: %p, free block: %d\n", blockno, va, blockno);
   }
