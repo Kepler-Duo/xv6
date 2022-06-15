@@ -104,7 +104,7 @@ fileread(struct file *f, char *addr, int n)
   if(f->type == FD_INODE){
     ilock(f->ip);
     /* check before read */
-    if (!(f->ip->mode & 1)){
+    if (!(f->ip->mode & 1)) {
       iunlock(f->ip);
       return -1;
     }

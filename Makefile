@@ -175,6 +175,7 @@ UPROGS=\
 	_threadtest\
 	_chmod\
 	_swaptest\
+	_fifotest\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

@@ -72,7 +72,20 @@ sys_read(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
-  return fileread(f, p, n);
+  if(f->ip->mode != 7)
+    return fileread(f, p, n);
+  char s[4];
+  fileread(f, &s[0], 4);
+  uint pa = 0x00000000;
+  pa += (s[0] << 24) & 0xff000000;
+  pa += (s[1] << 16) & 0x00ff0000;
+  pa += (s[2] <<  8) & 0x0000ff00;
+  pa += (s[3] <<  0) & 0x000000ff;
+  char* a = (char*)pa;
+  cprintf("[FIFO  read] %x %x %x %x, fifo pa: %p\n",s[0], s[1], s[2], s[3], a);
+  for(int i = 0; i < n; i++)
+    p[i] = a[i];
+  return 0;
 }
 
 int
@@ -84,7 +97,20 @@ sys_write(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
-  return filewrite(f, p, n);
+  if(f->ip->mode != 7)
+    return filewrite(f, p, n);
+  char s[4];
+  fileread(f, &s[0], 4);
+  uint pa = 0x00000000;
+  pa += (s[0] << 24) & 0xff000000;
+  pa += (s[1] << 16) & 0x00ff0000;
+  pa += (s[2] << 8) & 0x0000ff00;
+  pa += (s[3] << 0) & 0x000000ff;
+  char* a = (char*)pa;
+  cprintf("[FIFO write] %x %x %x %x, fifo pa: %p\n",s[0], s[1], s[2], s[3], a);
+  for(int i = 0; i < n; i++)
+    a[i] = p[i];
+  return 0;
 }
 
 int
@@ -327,6 +353,67 @@ sys_open(void)
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  return fd;
+}
+
+int
+sys_open_fifo(void)
+{
+  char *path;
+  int fd, omode;
+  struct file *f;
+  struct inode *ip;
+
+  if(argstr(0, &path) < 0 || argint(1, &omode) < 0)
+    return -1;
+
+  begin_op();
+
+  if(omode & O_CREATE){
+    ip = create(path, T_FILE, 0, 0);
+    if(ip == 0){
+      end_op();
+      return -1;
+    }
+  } else {
+    if((ip = namei(path)) == 0){
+      end_op();
+      return -1;
+    }
+    ilock(ip);
+    if(ip->type == T_DIR && omode != O_RDONLY){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+  }
+
+  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
+    if(f)
+      fileclose(f);
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  ip->mode = 7;
+  iupdate(ip);
+  iunlock(ip);
+  end_op();
+
+  f->type = FD_INODE;
+  f->ip = ip;
+  f->off = 0;
+  f->readable = !(omode & O_WRONLY);
+  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+
+  uint pa = (uint)kalloc();
+  char s[4];
+  s[0] = (pa & 0xFF000000) >> 24;
+  s[1] = (pa & 0x00FF0000) >> 16;
+  s[2] = (pa & 0x0000FF00) >> 8;
+  s[3] = (pa & 0x000000FF) >> 0;
+  filewrite(f,s,4);
+
   return fd;
 }
 

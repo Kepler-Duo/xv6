@@ -29,6 +29,8 @@ int join(int);
 
 int chmod(char*, char);
 
+int open_fifo(char*, int);
+
 // ulib.c
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);

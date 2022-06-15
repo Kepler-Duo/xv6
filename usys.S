@@ -34,3 +34,5 @@ SYSCALL(clone)
 SYSCALL(join)
 
 SYSCALL(chmod)
+
+SYSCALL(open_fifo)
